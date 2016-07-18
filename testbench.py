@@ -32,7 +32,12 @@ from class1stRandr import FirstRate
 # is used in 1st method, so we combine the assignment_phase and delivery_phase
 # together in this class. use xxx.[key-Tab] to find more outputs!
 
+from classFenpei import HopcroftKarp
+
 r"""
+In the multi-sender mulit-user system, we have
+- I files, J senders and K users, the cache size of user is M
+
 INPUT:
 - ''demands'' -- [K*I] matrix: which user is asking for which file
 - ''distribution'' -- [I*J] matrix: which file is stored by which sender
@@ -40,53 +45,127 @@ INPUT:
 - ''M'' -- cache size of users
 """
 
-M = 2
+##demands = np.array([[1, 0, 0, 0, 0, 0],
+##                    [0, 1, 0, 0, 0, 0],
+##                    [0, 0, 1, 0, 0, 0],
+##                    [0, 0, 0, 1, 0, 0],
+##                    [0, 0, 0, 0, 1, 0],
+##                    [0, 0, 0, 0, 0, 1]])
+##
+##distribution = np.array([[1, 1, 1, 1],
+##                         [1, 1, 1, 1],
+##                         [1, 1, 1, 1],
+##                         [1, 1, 1, 1],
+##                         [1, 1, 1, 1],
+##                         [1, 1, 1, 1]])
+##
+##connection = np.array([[1, 1, 1, 0, 0, 0],
+##                       [1, 0, 0, 1, 1, 0],
+##                       [0, 1, 0, 1, 0, 1],
+##                       [0, 0, 1, 0, 1, 1]])
 
-demands = np.array([[1, 0, 0, 0, 0, 0],
-                    [0, 1, 0, 0, 0, 0],
-                    [0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 0, 0, 1]])
 
-distribution = np.array([[1, 1, 1, 1],
-                         [1, 1, 1, 1],
-                         [1, 1, 1, 1],
-                         [1, 1, 1, 1],
-                         [1, 1, 1, 1],
-                         [1, 1, 1, 1]])
+demands = np.array([[1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 1]])
 
-connection = np.array([[1, 1, 1, 0, 0, 0],
-                       [1, 0, 0, 1, 1, 0],
-                       [0, 1, 0, 1, 0, 1],
-                       [0, 0, 1, 0, 1, 1]])
+distribution = np.array([[1,1,1],
+                         [1,1,1],
+                         [1,1,1]])
+
+connection = np.array([[0,1,1],
+                       [1,0,1],
+                       [1,1,0]])
 
 
 K = demands.shape[0]
 I = demands.shape[1]
 J = distribution.shape[1]
-t = int(M*K/I)
 
-f = Testify(distribution, connection)
-user_demands_file = f.testify_phase()
+a = Testify(distribution, connection)
+user_demands_file = a.testify_phase()
 
+b = Capability(demands, distribution, connection)
+demands_sender = b.capability_matrix().tolist()
 
-a = Capability(demands, distribution, connection)
-demands_sender = a.capability_matrix().tolist()
+R_1 = []
+R_2 = []
+r_1 = []
+r_2 = []
 
-# for the 1st method
-e = FirstRate(demands_sender, t)
-rate_pair_1 = e.required_rate() #[R, r]
-print('1:',rate_pair_1)
+for M in range(K+1):
 
-b = Table(demands_sender, K, J, M)
-capability_table = b.table_list()
+    t = int(M*K/I)
 
-# for the 2nd method
-c = SecondMethod(capability_table)
-track = c.assignment_phase() # or track = c.track
+    T = itertools.combinations(range(K), t)
+    files = [f for f in T]
+    file_part = len(files)
+    packet_size = 1/file_part
+    
+    if M == 0: # we do maximum matching for the assignment if M=0
 
-d = SecondRate(demands_sender, track, t)
-rate_pair_2 = d.required_rate() # [R, r]
-print('2:', rate_pair_2)
+        assignment_M_0 = dict()
+        
+        for user in range(len(demands_sender)):
+            sender_recorder = []
+            for sender in range(len(demands_sender[user])):
+                if demands_sender[user][sender] == 1:
+                    sender_recorder.append(sender+1)
+            #print(sender_recorder)
+            assignment_M_0['DS_'+str(user+1)] = set(sender_recorder)
+
+        R = 0 
+        r = 1 # every user get his required file from one of its capable senders,
+              # i.e., r_max = 1, r_min = 0.
+        while assignment_M_0 != {}:
+
+            assignment_result_M_0 = HopcroftKarp(copy.deepcopy(assignment_M_0)).maximum_matching()
+            for keys in assignment_result_M_0:
+                if type(keys) != int:
+                    assignment_M_0.pop(keys)
+            R = R + 1
+            
+        R_1.append(R)
+        R_2.append(R)
+        r_1.append(r)
+        r_2.append(r)
+
+    elif M == K:
+
+        R = 0
+        r = 0
+        R_1.append(R)
+        R_2.append(R)
+        r_1.append(r)
+        r_2.append(r)
+        
+    else:
+
+        # for the 1st method
+        method_1 = FirstRate(demands_sender, t)
+        rate_pair_1 = method_1.required_rate() #[R, r] for the first method
+
+        R_1.append(rate_pair_1[0]*packet_size)
+        r_1.append(rate_pair_1[1]*packet_size)
+
+        #*****************************************************
+
+        # for the 2nd method
+        method_2_step_1 = Table(demands_sender, K, J, M) 
+        capability_table = method_2_step_1.table_list() # capablitiy_table is a list [[[{},{},...],...],...]
+
+        method_2_step_2 = SecondMethod(capability_table)
+        track = method_2_step_2.assignment_phase() # track is a list of dict.
+
+        method_2_step_3 = SecondRate(demands_sender, track, t)
+        rate_pair_2 = method_2_step_3.required_rate() # [R, r] for the second method
+
+        R_2.append(rate_pair_2[0]*packet_size)
+        r_2.append(rate_pair_2[1]*packet_size)
+
+print('R_1: ', R_1)
+print('R_2: ', R_2)
+print('r_1: ', r_1)
+print('r_2: ', r_2)
+        
 
