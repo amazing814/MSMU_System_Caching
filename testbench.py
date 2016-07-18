@@ -1,5 +1,7 @@
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 import copy
 
 import itertools
@@ -45,37 +47,37 @@ INPUT:
 - ''M'' -- cache size of users
 """
 
-##demands = np.array([[1, 0, 0, 0, 0, 0],
-##                    [0, 1, 0, 0, 0, 0],
-##                    [0, 0, 1, 0, 0, 0],
-##                    [0, 0, 0, 1, 0, 0],
-##                    [0, 0, 0, 0, 1, 0],
-##                    [0, 0, 0, 0, 0, 1]])
+demands = np.array([[1, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 0, 1]])
+
+distribution = np.array([[1, 1, 1, 1],
+                         [1, 1, 1, 1],
+                         [1, 1, 1, 1],
+                         [1, 1, 1, 1],
+                         [1, 1, 1, 1],
+                         [1, 1, 1, 1]])
+
+connection = np.array([[1, 1, 1, 0, 0, 0],
+                       [1, 0, 0, 1, 1, 0],
+                       [0, 1, 0, 1, 0, 1],
+                       [0, 0, 1, 0, 1, 1]])
+
+
+##demands = np.array([[1, 0, 0],
+##                    [0, 1, 0],
+##                    [0, 0, 1]])
 ##
-##distribution = np.array([[1, 1, 1, 1],
-##                         [1, 1, 1, 1],
-##                         [1, 1, 1, 1],
-##                         [1, 1, 1, 1],
-##                         [1, 1, 1, 1],
-##                         [1, 1, 1, 1]])
+##distribution = np.array([[1,1,1],
+##                         [1,1,1],
+##                         [1,1,1]])
 ##
-##connection = np.array([[1, 1, 1, 0, 0, 0],
-##                       [1, 0, 0, 1, 1, 0],
-##                       [0, 1, 0, 1, 0, 1],
-##                       [0, 0, 1, 0, 1, 1]])
-
-
-demands = np.array([[1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1]])
-
-distribution = np.array([[1,1,1],
-                         [1,1,1],
-                         [1,1,1]])
-
-connection = np.array([[0,1,1],
-                       [1,0,1],
-                       [1,1,0]])
+##connection = np.array([[0,1,1],
+##                       [1,0,1],
+##                       [1,1,0]])
 
 
 K = demands.shape[0]
@@ -93,7 +95,7 @@ R_2 = []
 r_1 = []
 r_2 = []
 
-for M in range(K+1):
+for M in range(I+1): # M belongs to [0,1,2,...,I]
 
     t = int(M*K/I)
 
@@ -130,7 +132,7 @@ for M in range(K+1):
         r_1.append(r)
         r_2.append(r)
 
-    elif M == K:
+    elif M == I:
 
         R = 0
         r = 0
@@ -167,5 +169,43 @@ print('R_1: ', R_1)
 print('R_2: ', R_2)
 print('r_1: ', r_1)
 print('r_2: ', r_2)
+
+# now, draw the picture
+# At first, set the axis for M
+cach_size = []
+for m in range(I+1):
+    cach_size.append(m)
+    
+
+plt.subplot(121)
+plt.plot(cach_size, R_1, "go-", label="$R_1$", linewidth=2)
+plt.plot(cach_size, R_2, "rv-", label="$R_2$")
+plt.axis([0, I+0.2 , 0, R_1[0]+0.2])
+plt.legend()
+plt.xlabel("Cache size M (F-bits)")
+plt.ylabel("Performance Analysis (F-bits)")
+plt.title("Maximum required transmission rate of senders")
+
+plt.subplot(122)
+plt.plot(cach_size, r_1, 'go-', label='$r_1$', linewidth=2)
+plt.plot(cach_size, r_2, 'rv-', label='$r_2$')
+plt.axis([0, I+0.2 , 0, R_1[0]+0.2])
+plt.legend()
+plt.xlabel("Cache size M (F-bits)")
+plt.ylabel("Performance Analysis (F-bits)")
+plt.title("Maximum required transmission rate through links")
+
+    
+plt.show()
+
+
+
+
+
+
+
+
+
+
         
 
